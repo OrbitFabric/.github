@@ -58,12 +58,13 @@ storage and retention intent
 contact and downlink assumptions
 commandability
 autonomy
-operational scenarios
 ```
 
 The Mission Model remains the semantic source of truth.
 
-Generated documentation, runtime-facing bindings, ground-facing artifacts, machine-readable inspection surfaces and integration outputs are derived from it. They do not become competing definitions of the mission.
+Operational Scenarios are authored separately from the Mission Model. They exercise the Mission Data Contract as deterministic evidence inputs; they are not an additional Mission Model domain and do not become a competing semantic source of truth.
+
+Generated documentation, runtime-facing bindings, ground-facing artifacts, machine-readable inspection surfaces and the coherent Core Integration Input Set are derived from the Mission Model. Scenario evidence combines the Mission Model with separately authored Scenarios. Target-specific integration outputs additionally depend on an explicit Projection Profile and the selected adapter.
 
 ---
 
@@ -114,61 +115,102 @@ Its role is narrower and more foundational: preserve coherent mission meaning ac
 ## The ecosystem in one view
 
 ```text
-                 YOUR MISSION
-                      or
-             ORBITFABRIC REFERENCE MISSION
-                      |
-              Mission Model + Scenarios
-                      |
-                      v
-           +---------------------------+
-           |     ORBITFABRIC CORE      |
-           |                           |
-           |    semantic authority     |
-           |                           |
-           | validation + lint         |
-           | scenario evidence         |
-           | generated artifacts       |
-           | machine-readable facts    |
-           | integration contracts     |
-           | adapter lifecycle rules   |
-           +-------------+-------------+
-                         |
-          +--------------+----------------------+
-          |                                     |
-          | Core-owned facts                    | coherent integration inputs
-          v                                     v
-   +-------------------+              +---------------------------+
-   | ORBITFABRIC       |              |    INTEGRATION ADAPTERS   |
-   | STUDIO            |              |                           |
-   |                   |              | explicit target-specific  |
-   | understand        |              | projection + traceability |
-   | inspect           |              +-------------+-------------+
-   | navigate          |                            |
-   | explain           |             +--------------+--------------+
-   +-------------------+             |              |              |
-                                     v              v              v
-                                  F Prime     OpenC3 COSMOS      EDS / cFS
-                                     |
-                                     +-----------------------------+
-                                                   |
-                                                   v
-                                           OpenOBSW / OpenSVF
+                         MISSION AUTHORING
+        +--------------------------------------------------+
+        | YOUR MISSION                                     |
+        | or ORBITFABRIC REFERENCE MISSION                 |
+        |                                                  |
+        | Mission Model          Operational Scenarios     |
+        | semantic contract      evidence inputs           |
+        +------------------------+-------------------------+
+                                 |
+                                 v
+                    +-----------------------------+
+                    |      ORBITFABRIC CORE       |
+                    |                             |
+                    | semantic authority          |
+                    | validation + lint           |
+                    | scenario evidence           |
+                    | generated artifacts         |
+                    | Core-owned facts            |
+                    | Core Interface Manifest     |
+                    | Integration Input Set       |
+                    | adapter lifecycle semantics |
+                    +------------+----------------+
+                                 |
+              +------------------+---------------------------+
+              |                                              |
+              | Core Interface Manifest +                    | Core Integration Input Set
+              | Core-owned structured facts                  | + explicit target-specific
+              v                                              |   Projection Profile
+       +-------------------+                                 v
+       | ORBITFABRIC       |                    +---------------------------+
+       | STUDIO            |                    |    INTEGRATION ADAPTERS   |
+       |                   |                    |                           |
+       | understand        |                    | explicit target-specific  |
+       | inspect           |                    | projection + traceability |
+       | navigate          |                    | extensible boundary       |
+       | explain           |                    +-------------+-------------+
+       +-------------------+                                  |
+                                  +----------------------------+----------------------------+
+                                  |             |              |              |             |
+                                  v             v              v              v             v
+                              F Prime        OpenC3          EDS / cFS     OpenOBSW /     OTHER /
+                              Adapter        COSMOS          Adapter       OpenSVF        COMMUNITY
+                                             Adapter                        Adapter        ADAPTERS
+                                  |             |              |              |             |
+                                  v             v              v              v             v
+                              F Prime        OpenC3          EDS / cFS     OpenOBSW /     target-owned
+                              native         COSMOS          native        OpenSVF        systems /
+                              system         native          systems       native         tooling
+                                             system                         systems
 
-                                                   |
-                                                   v
-                                         native target systems
-                                         and retained evidence
+                         Each adapter path may emit target-native artifacts,
+                         Integration Results and retained acceptance evidence.
 
 
-        +----------------------------------------------------+
-        |            ADAPTER ECOSYSTEM SUPPORT               |
-        |                                                    |
-        | Adapter Developer Template                         |
-        | Adapter Catalog                                    |
-        | GitHub Release Source                              |
-        +----------------------------------------------------+
+                 ADAPTER LIFECYCLE / DISTRIBUTION SUPPORT
+
+       +----------------------------+     +----------------------------+
+       | Adapter Developer Template |     | Adapter Catalog            |
+       |                            |     |                            |
+       | build compatible adapters  |     | exact release identities   |
+       | and releases               |     | + source bindings          |
+       +----------------------------+     +-------------+--------------+
+                                                       |
+                                                       v
+                                      +-------------------------------+
+                                      | Provider-specific             |
+                                      | Release Sources               |
+                                      |                               |
+                                      | GitHub Release Source         |
+                                      |   current implementation      |
+                                      | additional providers          |
+                                      |   are an extension point      |
+                                      +---------------+---------------+
+                                                      |
+                                                      v
+                                           verified exact release
+                                           ResolvedAdapterRelease
+                                                      |
+                                                      v
+                                           +----------------------+
+                                           | Core Adapter Manager |
+                                           |                      |
+                                           | install / verify     |
+                                           | execute / remove     |
+                                           +----------+-----------+
+                                                      |
+                                                      v
+                                           Installed Adapter State
+                                                      |
+                                                      +--> adapter execution
+                                                           in the lane above
 ```
+
+The four named public adapters are the current OrbitFabric-maintained portfolio, not the architectural limit of the ecosystem. The adapter boundary is deliberately extensible: community-maintained, private, experimental and future target integrations can use the same Core-owned contracts without moving target-specific semantics into Core.
+
+The semantic/integration path and the adapter lifecycle/distribution path are deliberately separate. The Adapter Catalog identifies exact releases; provider-specific Release Sources acquire and verify exact release material; Core Adapter Manager owns the provider-neutral installed lifecycle. GitHub Release Source is the current provider implementation, not a GitHub-specific constraint on the architecture.
 
 The ecosystem is intentionally separated by ownership:
 
@@ -195,7 +237,7 @@ Its product thesis is deliberately human-centered:
 
 > OrbitFabric exposes the Mission Data Contract. OrbitFabric Studio exposes the mission to the human.
 
-Studio consumes structured Core-owned facts and organizes them into complementary engineering lenses for mission structure, entity inspection, relationships, operational logic, validation findings, scenarios, evidence and provenance.
+Studio first consumes the Core Interface Manifest to negotiate the Core capabilities it requires, then consumes structured Core-owned facts and organizes them into complementary engineering lenses for mission structure, entity inspection, relationships, operational logic, validation findings, scenarios, evidence and provenance.
 
 The authority boundary is strict:
 
@@ -287,7 +329,7 @@ static semantic agreement != deployment readiness
 
 ## Current integration adapters
 
-The current public adapter portfolio deliberately exercises materially different integration boundaries.
+The current public OrbitFabric-maintained adapter portfolio deliberately exercises materially different integration boundaries. These adapters are concrete implementations of an extensible adapter contract, not an exhaustive list of systems that OrbitFabric can integrate with.
 
 ### F Prime
 
@@ -359,7 +401,7 @@ The rule is simple:
 
 ## Adapter ecosystem support
 
-The adapter portfolio is supported by several deliberately separated projects.
+The adapter portfolio is supported by several deliberately separated projects. These support adapter development, discovery and acquisition; they do not sit inside the semantic projection path and they do not transfer target-specific authority into Core.
 
 ### Adapter Developer Template
 
@@ -385,7 +427,7 @@ Community-maintained adapters may be catalogued when they publish compatible exa
 
 The first provider-specific acquisition component for OrbitFabric adapters.
 
-It resolves and verifies exact adapter releases published through GitHub and hands verified release material into Core's provider-neutral lifecycle boundary.
+It resolves and verifies exact adapter releases published through GitHub and hands verified release material into Core's provider-neutral lifecycle boundary. Additional provider-specific Release Sources can be introduced behind the same resolved-release handoff when there is evidence to justify them; GitHub is the current implementation, not an architectural requirement.
 
 Keeping this component outside Core prevents GitHub-specific acquisition behavior from becoming part of the Mission Data Contract or Core semantic authority.
 
