@@ -88,6 +88,7 @@ ground-facing contract artifacts
 Mission Snapshot
 Entity Index
 Relationship Manifest
+Core Interface Manifest
 Core Integration Input Set
 integration contract surfaces
 provider-neutral adapter lifecycle boundaries
@@ -165,52 +166,66 @@ Its role is narrower and more foundational: preserve coherent mission meaning ac
                               system         native          systems       native         tooling
                                              system                         systems
 
-                         Each adapter path may emit target-native artifacts,
-                         Integration Results and retained acceptance evidence.
+                         Each adapter path emits an Integration Result and,
+                         where applicable, target-native artifacts. Native
+                         acceptance and verification can retain evidence for
+                         the behavior actually demonstrated.
 
 
                  ADAPTER LIFECYCLE / DISTRIBUTION SUPPORT
 
+       +----------------------------+
+       | Adapter Developer Template |
+       |                            |
+       | bootstrap compatible       |
+       | adapters and releases      |
+       +----------------------------+
+
        +----------------------------+     +----------------------------+
-       | Adapter Developer Template |     | Adapter Catalog            |
+       | Adapter Project Lock       |     | Adapter Catalog            |
        |                            |     |                            |
-       | build compatible adapters  |     | exact release identities   |
-       | and releases               |     | + source bindings          |
-       +----------------------------+     +-------------+--------------+
-                                                       |
-                                                       v
-                                      +-------------------------------+
-                                      | Provider-specific             |
-                                      | Release Sources               |
-                                      |                               |
-                                      | GitHub Release Source         |
-                                      |   current implementation      |
-                                      | additional providers          |
-                                      |   are an extension point      |
-                                      +---------------+---------------+
-                                                      |
-                                                      v
-                                           verified exact release
-                                           ResolvedAdapterRelease
-                                                      |
-                                                      v
-                                           +----------------------+
-                                           | Core Adapter Manager |
-                                           |                      |
-                                           | install / verify     |
-                                           | execute / remove     |
-                                           +----------+-----------+
-                                                      |
-                                                      v
-                                           Installed Adapter State
-                                                      |
-                                                      +--> adapter execution
-                                                           in the lane above
+       | project desired exact      |     | exact release identities   |
+       | adapter state              |     | + source bindings          |
+       +-------------+--------------+     +-------------+--------------+
+                     \                              /
+                      +-------------+--------------+
+                                    |
+                                    v
+                         exact release selection
+                                    |
+                                    v
+                      +-------------------------------+
+                      | Provider-specific             |
+                      | Release Sources               |
+                      |                               |
+                      | GitHub Release Source         |
+                      |   current implementation      |
+                      | additional providers          |
+                      |   are an extension point      |
+                      +---------------+---------------+
+                                      |
+                                      v
+                           verified exact release
+                           ResolvedAdapterRelease
+                                      |
+                                      v
+                           +----------------------+
+                           | Core Adapter Manager |
+                           |                      |
+                           | install / verify     |
+                           | execute / remove     |
+                           +----------+-----------+
+                                      |
+                                      v
+                           Installed Adapter State
+                                      |
+                                      +--> adapter execution
+                                           in the lane above
 ```
 
 The four named public adapters are the current OrbitFabric-maintained portfolio, not the architectural limit of the ecosystem. The adapter boundary is deliberately extensible: community-maintained, private, experimental and future target integrations can use the same Core-owned contracts without moving target-specific semantics into Core.
 
-The semantic/integration path and the adapter lifecycle/distribution path are deliberately separate. The Adapter Catalog identifies exact releases; provider-specific Release Sources acquire and verify exact release material; Core Adapter Manager owns the provider-neutral installed lifecycle. GitHub Release Source is the current provider implementation, not a GitHub-specific constraint on the architecture.
+The semantic/integration path and the adapter lifecycle/distribution path are deliberately separate. For the managed project path, Adapter Project Lock expresses desired exact state, the Adapter Catalog identifies exact releases and source bindings, provider-specific Release Sources acquire and verify exact release material, and Core Adapter Manager owns the provider-neutral installed lifecycle. GitHub Release Source is the current provider implementation, not a GitHub-specific constraint on the architecture. Compatible private, experimental and uncatalogued adapters remain valid outside the canonical Catalog path.
 
 The ecosystem is intentionally separated by ownership:
 
