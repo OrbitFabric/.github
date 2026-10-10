@@ -8,581 +8,237 @@
 
 # OrbitFabric
 
-OrbitFabric is an open-source engineering ecosystem built around a model-first **Mission Data Fabric for small spacecraft**.
+**OrbitFabric is an open-source, model-first Mission Data Fabric for small spacecraft.**
 
-Its purpose is to make mission semantics explicit, machine-readable, reusable and traceable across software, tooling, documentation, verification and external integrations without forcing those systems to share one implementation model.
+A spacecraft mission repeats the same concepts across flight software, ground operations, interface definitions, verification, simulation, documentation and external engineering tools. Those independently maintained representations can drift, even when everyone believes they are describing the same mission.
 
-The idea is simple:
+OrbitFabric makes mission meaning explicit, machine-readable and traceable, while preserving the authority of every system over its own implementation and runtime behavior.
 
-> Define mission meaning once, then let each engineering system remain authoritative for the part it actually owns.
+> Define mission meaning once. Keep its identity and provenance visible as different engineering systems realize, inspect and verify it.
 
-A spacecraft mission often describes the same concepts independently in many places:
+## Four roles in one engineering ecosystem
+
+| Project | Primary responsibility | What it does **not** own |
+| --- | --- | --- |
+| **[1. OrbitFabric Core](https://github.com/OrbitFabric/orbitfabric)** | Semantic authority: validate, exercise and export the Mission Data Contract | Native flight/ground implementations |
+| **[2. OrbitFabric Studio](https://github.com/OrbitFabric/orbitfabric-studio)** | Human engineering workbench: explore and understand Core-owned mission facts | A second interpretation of mission semantics |
+| **[3. Integration Adapters](#3-integration-adapters)** | Explicit projection and traceability toward independently owned target systems | Target-native architecture or runtime truth |
+| **[4. Reference Mission](https://github.com/OrbitFabric/orbitfabric-reference-mission)** | Shared engineering proving ground: one coherent mission, reproducible scenarios and Engineering Stories | A real spacecraft, flight stack or mission simulator |
+
+This order describes the ecosystem's **architectural roles and presentation priority**, not a sequential execution pipeline. Studio and adapters serve different purposes and consume explicit Core-owned surfaces. The Reference Mission exercises those boundaries; it does not sit downstream of Studio or of every adapter.
 
 ```text
-flight software
-ground software
-interface definitions
-test fixtures
-simulation and verification inputs
-documentation
-operational procedures
-payload integration
-storage and downlink planning
-external engineering tools
+Mission Model (the Mission Data Contract)
+        +
+separately authored Operational Scenarios
+                     |
+                     v
+              ORBITFABRIC CORE
+               semantic authority
+                  /         \
+                 /           \
+      Core-owned facts      Integration Input Set
+      + Interface Manifest  + explicit Projection Profile
+               |                       |
+               v                       v
+        ORBITFABRIC STUDIO       INTEGRATION ADAPTERS
+        human understanding     target-specific projection
+                                       |
+                                       v
+                             INDEPENDENT NATIVE SYSTEMS
+                             flight / ground / tooling
+                             native runtime + evidence
+
+       REFERENCE MISSION + ENGINEERING STORIES
+       provide shared context and reproducible,
+       evidence-bounded proofs across these boundaries
 ```
-
-Every independent representation is another opportunity for meaning to drift.
-
-OrbitFabric introduces an explicit **Mission Data Contract** so those representations can remain connected to one semantic root.
 
 ---
 
 ## The Mission Data Contract
 
-The Mission Data Contract is expressed through a structured **Mission Model**.
+The Mission Data Contract is expressed through a structured **Mission Model**, covering mission-level concerns such as spacecraft identity, subsystem topology, operational modes, commands, telemetry, events, faults, payload lifecycle, data products, storage, downlink assumptions, commandability and autonomy.
 
-It can describe mission-level concepts such as:
+The **Mission Model is the semantic source of truth**. Operational Scenarios are authored separately and exercise that model; they do not become a second semantic authority.
 
-```text
-spacecraft identity
-subsystems
-operational modes and transitions
-telemetry
-commands
-events
-faults and recovery intent
-packets and policies
-payload contracts
-data products
-storage and retention intent
-contact and downlink assumptions
-commandability
-autonomy
-```
+Core validates and interprets the model, exports documented machine-readable surfaces and generates contract-facing artifacts. Scenario evidence additionally consumes the separately authored Scenarios. Target-specific artifacts also require an explicit Projection Profile and an external integration implementation.
 
-The Mission Model remains the semantic source of truth.
-
-Operational Scenarios are authored separately from the Mission Model. They exercise the Mission Data Contract as deterministic evidence inputs; they are not an additional Mission Model domain and do not become a competing semantic source of truth.
-
-Generated documentation, runtime-facing bindings, ground-facing artifacts, machine-readable inspection surfaces and the coherent Core Integration Input Set are derived from the Mission Model. Scenario evidence combines the Mission Model with separately authored Scenarios. Target-specific integration outputs additionally depend on an explicit Projection Profile and the selected adapter.
-
----
-
-## OrbitFabric Core
-
-At the center of the ecosystem is [**OrbitFabric Core**](https://github.com/OrbitFabric/orbitfabric).
-
-Core is the semantic authority of OrbitFabric.
-
-It loads and validates the Mission Data Contract, performs semantic linting, executes deterministic host-side scenario evidence, generates contract-facing artifacts and exports machine-readable surfaces that downstream tools can consume without reconstructing mission meaning themselves.
-
-Core currently provides capabilities including:
+The fundamental separation is:
 
 ```text
-Mission Model loading and validation
-semantic linting
-deterministic scenario evidence
-generated mission documentation
-runtime-facing contract bindings
-ground-facing contract artifacts
-Mission Snapshot
-Entity Index
-Relationship Manifest
-Core Interface Manifest
-Core Integration Input Set
-integration contract surfaces
-provider-neutral adapter lifecycle boundaries
-```
-
-The architectural rule is:
-
-```text
-The Mission Model is the semantic source of truth.
-
-OrbitFabric Core owns Mission Data Contract interpretation.
-
-Downstream systems consume explicit Core-owned facts
-instead of independently rebuilding mission semantics.
-```
-
-Core is deliberately **not** a flight software framework, a ground segment, a mission control system, an operator console or a spacecraft dynamics simulator.
-
-Its role is narrower and more foundational: preserve coherent mission meaning across those boundaries.
-
-[Explore OrbitFabric Core](https://github.com/OrbitFabric/orbitfabric) · [Core documentation](https://orbitfabric.github.io/orbitfabric/)
-
----
-
-## The ecosystem in one view
-
-```text
-                         MISSION AUTHORING
-        +--------------------------------------------------+
-        | YOUR MISSION                                     |
-        | or ORBITFABRIC REFERENCE MISSION                 |
-        |                                                  |
-        | Mission Model          Operational Scenarios     |
-        | semantic contract      evidence inputs           |
-        +------------------------+-------------------------+
-                                 |
-                                 v
-                    +-----------------------------+
-                    |      ORBITFABRIC CORE       |
-                    |                             |
-                    | semantic authority          |
-                    | validation + lint           |
-                    | scenario evidence           |
-                    | generated artifacts         |
-                    | Core-owned facts            |
-                    | Core Interface Manifest     |
-                    | Integration Input Set       |
-                    | adapter lifecycle semantics |
-                    +------------+----------------+
-                                 |
-              +------------------+---------------------------+
-              |                                              |
-              | Core Interface Manifest +                    | Core Integration Input Set
-              | Core-owned structured facts                  | + explicit target-specific
-              v                                              |   Projection Profile
-       +-------------------+                                 v
-       | ORBITFABRIC       |                    +---------------------------+
-       | STUDIO            |                    |    INTEGRATION ADAPTERS   |
-       |                   |                    |                           |
-       | understand        |                    | explicit target-specific  |
-       | inspect           |                    | projection + traceability |
-       | navigate          |                    | extensible boundary       |
-       | explain           |                    +-------------+-------------+
-       +-------------------+                                  |
-                                  +----------------------------+----------------------------+
-                                  |             |              |              |             |
-                                  v             v              v              v             v
-                              F Prime        OpenC3          EDS / cFS     OpenOBSW /     OTHER /
-                              Adapter        COSMOS          Adapter       OpenSVF        COMMUNITY
-                                             Adapter                        Adapter        ADAPTERS
-                                  |             |              |              |             |
-                                  v             v              v              v             v
-                              F Prime        OpenC3          EDS / cFS     OpenOBSW /     target-owned
-                              native         COSMOS          native        OpenSVF        systems /
-                              system         native          systems       native         tooling
-                                             system                         systems
-
-                         Each adapter path emits an Integration Result and,
-                         where applicable, target-native artifacts. Native
-                         acceptance and verification can retain evidence for
-                         the behavior actually demonstrated.
-
-
-                 ADAPTER LIFECYCLE / DISTRIBUTION SUPPORT
-
-       +----------------------------+
-       | Adapter Developer Template |
-       |                            |
-       | bootstrap compatible       |
-       | adapters and releases      |
-       +----------------------------+
-
-       +----------------------------+     +----------------------------+
-       | Adapter Project Lock       |     | Adapter Catalog            |
-       |                            |     |                            |
-       | project desired exact      |     | exact release identities   |
-       | adapter state              |     | + source bindings          |
-       +-------------+--------------+     +-------------+--------------+
-                     \                              /
-                      +-------------+--------------+
-                                    |
-                                    v
-                         exact release selection
-                                    |
-                                    v
-                      +-------------------------------+
-                      | Provider-specific             |
-                      | Release Sources               |
-                      |                               |
-                      | GitHub Release Source         |
-                      |   current implementation      |
-                      | additional providers          |
-                      |   are an extension point      |
-                      +---------------+---------------+
-                                      |
-                                      v
-                           verified exact release
-                           ResolvedAdapterRelease
-                                      |
-                                      v
-                           +----------------------+
-                           | Core Adapter Manager |
-                           |                      |
-                           | install / verify     |
-                           | execute / remove     |
-                           +----------+-----------+
-                                      |
-                                      v
-                           Installed Adapter State
-                                      |
-                                      +--> adapter execution
-                                           in the lane above
-```
-
-The four named public adapters are the current OrbitFabric-maintained portfolio, not the architectural limit of the ecosystem. The adapter boundary is deliberately extensible: community-maintained, private, experimental and future target integrations can use the same Core-owned contracts without moving target-specific semantics into Core.
-
-The semantic/integration path and the adapter lifecycle/distribution path are deliberately separate. For the managed project path, Adapter Project Lock expresses desired exact state, the Adapter Catalog identifies exact releases and source bindings, provider-specific Release Sources acquire and verify exact release material, and Core Adapter Manager owns the provider-neutral installed lifecycle. GitHub Release Source is the current provider implementation, not a GitHub-specific constraint on the architecture. Compatible private, experimental and uncatalogued adapters remain valid outside the canonical Catalog path.
-
-The ecosystem is intentionally separated by ownership:
-
-```text
-Core owns mission semantics.
-
-Studio makes Core-owned facts understandable to humans.
-
-Adapters own explicit target-specific projection and traceability.
-
-External systems remain authoritative for their native
-architecture, implementation and runtime behavior.
-
-Evidence records what was actually demonstrated.
+mission meaning != native system implementation
+declared intent != projected behavior
+projected behavior != executed behavior
+executed behavior != evidence-supported observation
 ```
 
 ---
 
-## OrbitFabric Studio
+## 1. OrbitFabric Core
 
-[**OrbitFabric Studio**](https://github.com/OrbitFabric/orbitfabric-studio) is the local-first engineering workbench for seeing and understanding an OrbitFabric mission.
+[**OrbitFabric Core**](https://github.com/OrbitFabric/orbitfabric) is the foundation of the ecosystem and the **sole OrbitFabric authority for Mission Data Contract interpretation**.
 
-Its product thesis is deliberately human-centered:
+Core loads and validates the Mission Model, performs semantic linting, executes deterministic host-side Scenario evidence and produces generated documentation and contract-facing outputs. It also exposes structured facts for consumers that must not reconstruct mission meaning themselves.
 
-> OrbitFabric exposes the Mission Data Contract. OrbitFabric Studio exposes the mission to the human.
+Important Core-owned surfaces and boundaries include:
 
-Studio first consumes the Core Interface Manifest to negotiate the Core capabilities it requires, then consumes structured Core-owned facts and organizes them into complementary engineering lenses for mission structure, entity inspection, relationships, operational logic, validation findings, scenarios, evidence and provenance.
+- **Mission Snapshot, Entity Index and Relationship Manifest** for structured mission understanding;
+- **Scenario Declaration and scenario evidence** for exact source identities and bounded verification;
+- **Core Interface Manifest** for capability and contract compatibility negotiation;
+- **Core Integration Input Set** for coherent downstream integration inputs;
+- **generic integration contracts** describing Projection Profiles, external adapter execution and Integration Results;
+- **provider-neutral adapter lifecycle contracts and management**, separate from provider-specific release acquisition.
 
-The authority boundary is strict:
+Core owns the semantics and the contracts. It does **not** implement the native architecture of F Prime, COSMOS, cFS or any other external system. Nor is it itself a flight software framework, ground segment, mission control system, operator console or spacecraft dynamics simulator.
+
+This is a deliberate constraint: if another component must invent mission meaning to do its job, the boundary should be investigated rather than silently bypassed.
+
+[Explore Core](https://github.com/OrbitFabric/orbitfabric) · [Core documentation](https://orbitfabric.github.io/orbitfabric/)
+
+---
+
+## 2. OrbitFabric Studio
+
+[**OrbitFabric Studio**](https://github.com/OrbitFabric/orbitfabric-studio) is the local-first, human-facing engineering workbench.
+
+> OrbitFabric Core exposes the Mission Data Contract. OrbitFabric Studio exposes the mission to the human.
+
+Studio makes explicit mission facts easier to **find, navigate, relate and understand**. Its public preview includes Mission Atlas, entity exploration and Entity X-Ray, relationship context and maps, validation findings and operational-logic views.
+
+Studio consumes structured Core-owned information. Its compatibility boundary begins with the **Core Interface Manifest** and the capabilities each view requires. The mission's semantic identities, relationships and operational constraints are not reconstructed from filenames, YAML conventions or UI heuristics.
+
+The design rule is concise:
 
 ```text
 Core owns the fact.
 Studio makes the fact understandable.
 ```
 
-Studio may organize, navigate, label, correlate and visualize explicit mission facts.
+Studio is not intended to become another Mission Model interpreter, a generic JSON dashboard, a mission-control console or a source of inferred runtime truth. Its interface and presentation can evolve without displacing the semantic authority underneath.
 
-It must not become a second Mission Model interpreter, privately recover missing semantics from YAML, invent relationships, manufacture mission-readiness scores or present engineering UI state as mission truth.
+Studio is currently published as a **development preview**; newer work in its repository does not automatically imply released product capabilities.
 
-[Explore OrbitFabric Studio](https://github.com/OrbitFabric/orbitfabric-studio)
-
----
-
-## OrbitFabric Reference Mission
-
-[**OrbitFabric Reference Mission**](https://github.com/OrbitFabric/orbitfabric-reference-mission) is the shared public engineering environment for the ecosystem.
-
-It is a realistic but synthetic small-spacecraft mission used as:
-
-```text
-a progressive Mission Data Contract tutorial
-an executable scenario evidence set
-a Core integration/reference mission
-a Studio engineering acceptance mission
-an ecosystem convergence environment
-a source for reproducible Engineering Stories
-```
-
-The Reference Mission is not flight software, a real spacecraft configuration or a spacecraft simulator.
-
-Its role is to provide one coherent mission context in which architectural claims can be demonstrated against the same semantic root instead of through unrelated examples.
-
-[Explore the Reference Mission](https://orbitfabric.github.io/orbitfabric-reference-mission/)
+[Explore Studio](https://github.com/OrbitFabric/orbitfabric-studio) · [Studio release and development status](https://github.com/OrbitFabric/orbitfabric-studio#public-preview-scope)
 
 ---
 
-## Integration model
+## 3. Integration Adapters
 
-OrbitFabric integrations are based on explicit boundaries rather than hidden translation rules.
+**Integration Adapters** carry explicit OrbitFabric mission intent toward target-native engineering representations. They do not translate by privately reinterpreting the original Mission Model.
 
-The generic pattern is:
+The generic integration boundary is:
 
 ```text
-Mission Model
-    |
-    v
 OrbitFabric Core
-    |
-    v
-coherent Core Integration Input Set
-    |
+    -> coherent Core Integration Input Set
     + explicit Projection Profile
-    |
-    v
-target-specific Adapter
-    |
-    + target-native artifacts
-    + mappings
-    + diagnostics
-    + provenance
-    + Integration Result
-    |
-    v
-native target tooling / runtime / verification
+    -> external Integration Package / Adapter
+    -> Integration Result + target-native artifacts
+    -> independently owned target tools / systems
 ```
 
-An adapter does not gain authority to reinterpret Mission Data Contract semantics.
+The Projection Profile expresses target-specific projection intent. An adapter owns its projection, mappings, diagnostics, coverage and provenance. **The downstream system remains authoritative** for native implementation, execution and observed runtime behavior.
 
-A production integration consumes documented Core-owned surfaces. It does not silently fall back to reparsing raw Mission Model YAML when a required semantic surface is missing or incompatible.
+### Current public adapter portfolio
 
-The Projection Profile expresses explicit target-specific intent. The adapter owns the projection. The target ecosystem remains authoritative for native realization.
+| Adapter | Target boundary |
+| --- | --- |
+| **[F Prime](https://github.com/OrbitFabric/orbitfabric-fprime-adapter)** | Projects explicit mission contracts into F Prime / FPP engineering surfaces while preserving native component architecture, deployment, dictionary and runtime ownership |
+| **[OpenC3 COSMOS](https://github.com/OrbitFabric/orbitfabric-openc3-cosmos-adapter)** | Projects selected command, ground-operation and verification intent into COSMOS-native surfaces without taking ownership of COSMOS execution |
+| **[EDS / cFS](https://github.com/OrbitFabric/orbitfabric-eds-cfs-adapter)** | Carries contracts through Electronic Data Sheets toward NASA EdsLib / cFS integration, retaining native cFS/EdsLib authority |
+| **[OpenOBSW / OpenSVF](https://github.com/OrbitFabric/orbitfabric-openobsw-opensvf-adapter)** | Connects mission contracts with OpenOBSW integration and OpenSVF validation workflows while keeping those systems independent |
 
-This separation is fundamental:
+These are the four OrbitFabric-maintained public adapters, **not the architectural limit**. Compatible community, private and experimental integrations can exercise the same documented contract boundaries.
 
-```text
-mission meaning != target realization
+**Integration Coverage** describes exactly what an adapter projects and what it does not. It distinguishes source semantic surface, target applicability and adapter-declared scope instead of turning a partial mapping into a blanket “supported” claim. Native results and retained evidence bound the integration claim.
 
-declared behavior != observed behavior
+### Adapter development and distribution support
 
-projected constraint != runtime enforcement
+These are supporting components, **not additional mission-semantic authorities**:
 
-static semantic agreement != deployment readiness
-```
+- [**Adapter Developer Template**](https://github.com/OrbitFabric/orbitfabric-adapter-template): executable starting point for compatible adapters, tests and packaging.
+- [**Adapter Catalog**](https://github.com/OrbitFabric/orbitfabric-adapter-catalog): version-controlled data describing exact releases and acquisition source bindings; not a package registry.
+- [**GitHub Release Source**](https://github.com/OrbitFabric/orbitfabric-github-release-source): the current provider-specific source for retrieving and verifying exact GitHub-published adapter releases.
+- **Core Adapter Manager**: Core-owned, provider-neutral installed-state and lifecycle boundary, including installation, verification, execution and removal.
 
----
+A managed path connects **project desired state**, exact Catalog selection, a verified Release Source handoff and the Core Adapter Manager. That lifecycle is distinct from the semantic projection contract. It does not require every compatible adapter to be public, catalogued or hosted on GitHub.
 
-## Current integration adapters
-
-The current public OrbitFabric-maintained adapter portfolio deliberately exercises materially different integration boundaries. These adapters are concrete implementations of an extensible adapter contract, not an exhaustive list of systems that OrbitFabric can integrate with.
-
-### F Prime
-
-[**orbitfabric-fprime-adapter**](https://github.com/OrbitFabric/orbitfabric-fprime-adapter)
-
-Projects explicit OrbitFabric mission contracts toward native F Prime and FPP engineering surfaces while preserving F Prime ownership of component architecture, instances, topology, scheduling, generated dictionaries and runtime behavior.
-
-### OpenC3 COSMOS
-
-[**orbitfabric-openc3-cosmos-adapter**](https://github.com/OrbitFabric/orbitfabric-openc3-cosmos-adapter)
-
-Projects selected mission and verification intent toward OpenC3 COSMOS-native procedures and verification surfaces while preserving COSMOS ownership of its target model, interfaces, telemetry processing, procedure execution and runtime behavior.
-
-### EDS / cFS
-
-[**orbitfabric-eds-cfs-adapter**](https://github.com/OrbitFabric/orbitfabric-eds-cfs-adapter)
-
-Carries OrbitFabric contracts through CCSDS Electronic Data Sheets into the NASA EdsLib / cFS integration lane.
-
-The adapter owns deterministic projection and traceability. The selected cFS mission owns mission-specific target allocation. EdsLib, MissionLib, cFE and cFS remain authoritative for native realization and runtime behavior.
-
-### OpenOBSW / OpenSVF
-
-[**orbitfabric-openobsw-opensvf-adapter**](https://github.com/OrbitFabric/orbitfabric-openobsw-opensvf-adapter)
-
-Connects OrbitFabric mission contracts with OpenOBSW integration surfaces and OpenSVF validation workflows while preserving the independent authority of both downstream systems.
-
-F Prime, OpenC3 COSMOS, NASA cFS/EdsLib, OpenOBSW and OpenSVF are independent upstream projects. OrbitFabric integrations do not imply endorsement by those projects.
+The upstream projects are independently maintained. OrbitFabric integration does not imply their endorsement.
 
 ---
 
-## Integration Coverage
+## 4. OrbitFabric Reference Mission
 
-OrbitFabric-maintained adapters do not describe maturity through vague claims such as "supported" or a single percentage.
+[**OrbitFabric Reference Mission**](https://github.com/OrbitFabric/orbitfabric-reference-mission) is the shared engineering proving ground for Core, Studio and the integration ecosystem.
 
-They explicitly distinguish:
+It provides a **realistic but synthetic** small-spacecraft Mission Model, separately authored operational Scenarios, a progressive tutorial, generated evidence and the common mission context used to exercise OrbitFabric's architectural claims.
 
-```text
-OrbitFabric Semantic Surface
-        |
-        v
-Target Applicable Surface
-        |
-        v
-Adapter Declared Scope
-```
+It serves two complementary purposes:
 
-Capabilities are classified using explicit dispositions such as:
+**Reference Mission:** one coherent canonical mission context in which Core semantics, scenarios, generated surfaces and Studio exploration can be inspected without constructing a new example for every feature.
 
-```text
-FULL
-PARTIAL
-OUT_OF_SCOPE
-NOT_IMPLEMENTED
-TARGET_UNSUPPORTED
-NOT_APPLICABLE
-NOT_ANALYZED
-```
+**Engineering Stories:** reproducible, question-driven investigations that select a bounded mission slice and test it against actual tools, independently owned engineering systems or runtime boundaries.
 
-This matters because a focused adapter can be complete within its declared purpose without pretending to implement every feature of the downstream system.
+The Reference Mission is **not** a real spacecraft configuration, flight software, ground segment or spacecraft simulator.
 
-Likewise, a downstream limitation is recorded as a limitation of the projection or target rather than silently weakening the upstream Mission Data Contract.
+[Explore Reference Mission](https://orbitfabric.github.io/orbitfabric-reference-mission/) · [Repository](https://github.com/OrbitFabric/orbitfabric-reference-mission)
 
-The rule is simple:
+### Published Engineering Stories
 
-> Integration claims stop where the retained evidence stops.
+Every Engineering Story has two required layers: a **Front Story** for the engineering question, investigation and conclusions, and a **Reference Project** for inspectable and reproducible artifacts. A separate **Technical Deep Dive is optional**, when the mechanics and evidence merit their own document.
+
+**[R1: One Mission Contract Across Flight and Ground](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r1-flight-ground/)**
+
+R1 tests whether one mission-level semantic root can survive independently owned flight and ground engineering paths. A concrete stop-acquisition slice passes through **F Prime** and **OpenC3 COSMOS** and converges in an accepted live command/telemetry verification loop. R1 also provides a [Technical Deep Dive](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r1-flight-ground/technical-deep-dive/).
+
+**[R2: One Intent, Two Executions](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r2-pwnsat/)**
+
+R2 asks whether mission intent can remain accountable through an external runtime that OrbitFabric does not control. Using the existing `obc.request_health_check` operation and **PWNSAT/FlatSat**, it separates authorized invocation, frozen command representation, controlled presentation, runtime occurrences and native observation.
+
+**R2 is published as a bounded offline Engineering Story:** projection lineage and the software-side evidence/falsification harness are reproducible; **physical FlatSat execution has not yet been run**, and no physical execution-multiplicity result is claimed. R2 has a Reference Project but does not currently require a separate Technical Deep Dive.
+
+[Browse all Engineering Stories](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/)
 
 ---
 
-## Adapter ecosystem support
+## Engineering discipline and evidence
 
-The adapter portfolio is supported by several deliberately separated projects. These support adapter development, discovery and acquisition; they do not sit inside the semantic projection path and they do not transfer target-specific authority into Core.
+OrbitFabric's architectural boundaries are made explicit and testable. Important practices include:
 
-### Adapter Developer Template
+- clear ownership of meaning, projection, native behavior and observation;
+- explicit contracts, compatibility rules and stable-versus-candidate classifications;
+- exact dependency baselines and provenance;
+- deterministic evidence and retained artifacts;
+- Integration Coverage with explicit limitations and non-claims;
+- bounded acceptance and fail-closed handling when available evidence is insufficient.
 
-[**orbitfabric-adapter-template**](https://github.com/OrbitFabric/orbitfabric-adapter-template)
+An Integration Result does not by itself prove a target behaved as intended. A native telemetry observation does not automatically prove an authorized invocation executed exactly once. **Claims stop where the evidence stops.**
 
-An executable starting point for developers building new OrbitFabric-compatible adapters.
-
-It demonstrates repository structure, contract consumption, packaging, testing, release boundaries and Integration Coverage without becoming an alternative specification to Core.
-
-### Adapter Catalog
-
-[**orbitfabric-adapter-catalog**](https://github.com/OrbitFabric/orbitfabric-adapter-catalog)
-
-The canonical version-controlled index of exact adapter releases and their acquisition source bindings.
-
-The Catalog is a data product, not a package registry and not an endorsement database.
-
-Community-maintained adapters may be catalogued when they publish compatible exact release identities and artifacts. Private, experimental and uncatalogued adapters remain valid.
-
-### GitHub Release Source
-
-[**orbitfabric-github-release-source**](https://github.com/OrbitFabric/orbitfabric-github-release-source)
-
-The first provider-specific acquisition component for OrbitFabric adapters.
-
-It resolves and verifies exact adapter releases published through GitHub and hands verified release material into Core's provider-neutral lifecycle boundary. Additional provider-specific Release Sources can be introduced behind the same resolved-release handoff when there is evidence to justify them; GitHub is the current implementation, not an architectural requirement.
-
-Keeping this component outside Core prevents GitHub-specific acquisition behavior from becoming part of the Mission Data Contract or Core semantic authority.
-
-### Core Adapter Management
-
-Adapter lifecycle semantics themselves remain Core-owned.
-
-Core distinguishes logical adapter identity, exact release identity, project desired state, installed state and provider-specific acquisition metadata.
-
-This separation allows distribution mechanisms to evolve without redefining what an adapter means or how mission semantics are owned.
+Architecture decisions, conformance tests and reproducible Engineering Stories are kept visible so conclusions can be challenged rather than taken on trust.
 
 ---
 
-## Engineering Stories
+## Open source and participation
 
-The Reference Mission also hosts **Engineering Stories**: reproducible technical investigations built around concrete engineering questions.
+OrbitFabric is designed for spacecraft software and systems architects, flight and ground engineers, verification teams, payload integrators, research laboratories, small-spacecraft projects and developers of engineering tools.
 
-A complete Engineering Story is intentionally layered:
+Its public reference material follows a clean-room approach: synthetic or publicly usable inputs rather than private mission configurations, employer-owned code or proprietary interfaces.
 
-```text
-Front Story
-    Why does this matter?
-    What problem did we explore?
-    What did we learn?
-
-Technical Deep Dive
-    How exactly does it work?
-    Where are the ownership boundaries?
-    What evidence supports the claim?
-
-Reference Project
-    Can I inspect it?
-    Can I run it?
-    Can I reproduce the result?
-```
-
-The first completed Story is:
-
-### R1: One Mission Contract Across Flight and Ground
-
-R1 asks whether one canonical mission-level semantic root can drive independently owned flight and ground engineering paths without forcing either side to adopt the other's implementation model.
-
-The experiment follows one concrete command-and-telemetry slice through native F Prime and OpenC3 COSMOS paths and into a live flight-ground verification loop.
-
-The result is deliberately narrow and evidence-backed:
-
-> One mission-level semantic root can remain authoritative over meaning while native flight and ground systems retain their own architecture, implementation ownership and runtime behavior, and the two paths can still be verified to converge on one real command/telemetry loop.
-
-[Read the R1 Engineering Story](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r1-flight-ground/) · [Technical Deep Dive](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r1-flight-ground/technical-deep-dive/)
-
----
-
-## Engineering discipline
-
-OrbitFabric is developed as an engineering system, not as a collection of loosely related utilities.
-
-Important architectural boundaries are made explicit before they become product behavior.
-
-The project uses:
-
-```text
-explicit contracts
-clear semantic ownership
-stable vs candidate surface classification
-exact dependency baselines
-compatibility rules
-fail-closed behavior
-deterministic evidence
-retained provenance
-native downstream acceptance
-controlled releases
-bounded claims
-```
-
-A surface does not become stable merely because it exists.
-
-A generated artifact does not become authoritative merely because another system consumes it.
-
-An integration does not claim semantics that were not actually projected.
-
-A native target behavior is not inferred from a schema if runtime evidence says otherwise.
-
-A successful static mapping is not presented as proof of a functioning deployment.
-
-Architectural investigations, decisions, implementation gates and acceptance evidence are maintained through a structured engineering process so that significant changes are reasoned about, falsified where possible and demonstrated before they become part of the public product surface.
-
-That rigor is intentionally visible in the repositories through contracts, compatibility documentation, Integration Coverage, exact version baselines, reproducible examples and retained CI evidence.
-
----
-
-## Open source
-
-OrbitFabric is an open-source engineering project.
-
-The public repositories are intended to be inspected, reproduced, challenged and extended.
-
-Public examples and reference material follow a clean-room approach: synthetic or publicly usable material is used instead of proprietary mission data, private packet definitions, employer-owned code or customer information.
-
-Community integrations are welcome.
-
-Extending OrbitFabric does not require moving target-specific semantics into Core. New systems can remain authoritative for their own native behavior while participating through explicit contracts and evidence-backed integration boundaries.
-
----
-
-## Who OrbitFabric is for
-
-OrbitFabric is intended for people working where mission meaning crosses software or organizational boundaries, including:
-
-- spacecraft software and systems architects;
-- flight software engineers;
-- ground software and operations engineers;
-- verification and validation engineers;
-- payload and subsystem integrators;
-- university CubeSat and small-spacecraft teams;
-- research laboratories;
-- small space companies and technical teams;
-- embedded engineers entering the space domain;
-- developers building engineering tools around mission semantics.
-
-OrbitFabric may be especially relevant when the same mission information currently exists independently in code, dictionaries, documents, tests, procedures and integration scripts and those representations need to remain traceable to one explicit semantic root.
-
----
+Contributions and external integrations are welcome. An integration can preserve both a shared mission meaning and the independence of its target ecosystem.
 
 ## Where to start
 
-| If you want to... | Start with |
+| Goal | Entry point |
 | --- | --- |
-| Understand OrbitFabric semantics and the Mission Data Contract | [OrbitFabric Core](https://github.com/OrbitFabric/orbitfabric) |
-| Install and exercise Core | [Core documentation](https://orbitfabric.github.io/orbitfabric/) |
-| See and navigate a mission interactively | [OrbitFabric Studio](https://github.com/OrbitFabric/orbitfabric-studio) |
-| Explore a coherent synthetic mission | [Reference Mission](https://github.com/OrbitFabric/orbitfabric-reference-mission) |
-| Follow an end-to-end flight/ground engineering proof | [R1 Engineering Story](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r1-flight-ground/) |
-| Integrate with F Prime | [F Prime Adapter](https://github.com/OrbitFabric/orbitfabric-fprime-adapter) |
-| Integrate with OpenC3 COSMOS | [OpenC3 COSMOS Adapter](https://github.com/OrbitFabric/orbitfabric-openc3-cosmos-adapter) |
-| Integrate with NASA cFS / EdsLib | [EDS-cFS Adapter](https://github.com/OrbitFabric/orbitfabric-eds-cfs-adapter) |
-| Integrate with OpenOBSW / OpenSVF | [OpenOBSW/OpenSVF Adapter](https://github.com/OrbitFabric/orbitfabric-openobsw-opensvf-adapter) |
-| Build a new adapter | [Adapter Developer Template](https://github.com/OrbitFabric/orbitfabric-adapter-template) |
-| Browse exact adapter release identities | [Adapter Catalog](https://github.com/OrbitFabric/orbitfabric-adapter-catalog) |
-| Understand GitHub-based adapter acquisition | [GitHub Release Source](https://github.com/OrbitFabric/orbitfabric-github-release-source) |
+| **Understand the semantic foundation** | [OrbitFabric Core](https://github.com/OrbitFabric/orbitfabric) · [documentation](https://orbitfabric.github.io/orbitfabric/) |
+| **Explore a mission visually** | [OrbitFabric Studio](https://github.com/OrbitFabric/orbitfabric-studio) |
+| **Integrate a native toolchain** | [F Prime](https://github.com/OrbitFabric/orbitfabric-fprime-adapter) · [OpenC3 COSMOS](https://github.com/OrbitFabric/orbitfabric-openc3-cosmos-adapter) · [EDS/cFS](https://github.com/OrbitFabric/orbitfabric-eds-cfs-adapter) · [OpenOBSW/OpenSVF](https://github.com/OrbitFabric/orbitfabric-openobsw-opensvf-adapter) |
+| **Explore the shared example mission** | [Reference Mission](https://orbitfabric.github.io/orbitfabric-reference-mission/) |
+| **Follow a verified flight/ground proof** | [R1 Engineering Story](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r1-flight-ground/) |
+| **Explore external runtime accountability** | [R2 Engineering Story](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r2-pwnsat/) |
+| **Build or distribute an adapter** | [Adapter Template](https://github.com/OrbitFabric/orbitfabric-adapter-template) · [Catalog](https://github.com/OrbitFabric/orbitfabric-adapter-catalog) · [GitHub Release Source](https://github.com/OrbitFabric/orbitfabric-github-release-source) |
 
 ---
 
-**OrbitFabric makes the mission contract explicit so that the systems around it can evolve without silently redefining what the mission means.**
+**OrbitFabric makes mission meaning explicit so the systems around it can evolve without silently redefining what the mission means.**
