@@ -209,7 +209,6 @@ These commitments are as important as individual features. They allow the compon
 | Explore the limits of execution accountability | [Engineering Story R2](https://orbitfabric.github.io/orbitfabric-reference-mission/engineering-stories/r2-pwnsat/) |
 | Build or install a compatible adapter | [Adapter Template](https://github.com/OrbitFabric/orbitfabric-adapter-template), [Catalog](https://github.com/OrbitFabric/orbitfabric-adapter-catalog) and [Release Source](https://github.com/OrbitFabric/orbitfabric-github-release-source) |
 
-[OrbitFabric Analytics](https://github.com/OrbitFabric/orbitfabric-analytics) separately retains **ecosystem/community observability**, not mission data or operational evidence. It supports project stewardship without changing the four architectural roles above.
 
 ---
 
